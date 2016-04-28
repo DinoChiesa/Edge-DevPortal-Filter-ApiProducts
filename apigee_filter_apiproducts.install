@@ -1,0 +1,62 @@
+<?php
+/**
+ * @file
+ * Apigee API Product list filter - installation
+ * 
+ * This is the install logic for the module that maybe filters the API Product list.
+ *
+ */
+
+module_load_include('inc', 'apigee_filter_apiproducts', 'functions');
+
+function apigee_filter_apiproducts_uninstall() {
+  $varprefix = 'apigee_filter_apiproducts_';
+  /* legacy */
+  variable_del($varprefix . 'enabled');
+  variable_del($varprefix . 'envname');
+  variable_del($varprefix . 'envnames');
+  variable_del($varprefix . 'environments');
+  variable_del($varprefix . 'conditional');
+  variable_del($varprefix . 'hostpattern');
+  
+  $available_environments = apigee_filter_apiproducts_all_environments();
+  foreach($available_environments as $env) {
+    $var = $varprefix . 'enabled_' . $env;
+    variable_del($var);
+    $var = $varprefix . 'hostpattern_' . $env;
+    variable_del($var);
+  }  
+}
+
+function apigee_filter_apiproducts_install() {
+  $varprefix = 'apigee_filter_apiproducts_';
+  $available_environments = apigee_filter_apiproducts_all_environments();
+
+  variable_set($varprefix . 'enabled', variable_get($varprefix . 'enabled', 0));
+  
+  foreach($available_environments as $env) {
+    $var = $varprefix . 'enabled_' . $env;
+    variable_set($var, variable_get($var, 0));
+    $var = $varprefix . 'hostpattern_' . $env;
+    variable_set($var, variable_get($var, apigee_filter_apiproducts_regexize_host()));
+  }
+
+  /* -------------------------------------------------------------------------------- */
+  /* legacy */
+  $vars_to_delete = array('envnames','environments','conditional','hostpattern','envname');
+  foreach($vars_to_delete as $var) {
+    variable_del($varprefix . $var);
+  }
+
+  // variable_set('apigee_filter_apiproducts_envnames',
+  //              variable_get('apigee_filter_apiproducts_envnames', 'prod'));
+  // variable_set('apigee_filter_apiproducts_environments',
+  //              variable_get('apigee_filter_apiproducts_environments', array('prod')));
+  // variable_set('apigee_filter_apiproducts_conditional', 
+  //              variable_get('apigee_filter_apiproducts_conditional', 0));
+  // variable_set('apigee_filter_apiproducts_hostpattern', 
+  //              variable_get('apigee_filter_apiproducts_hostpattern', '^dev'));
+  // variable_set('apigee_filter_apiproducts_envname', 'prod');
+}
+
+?>

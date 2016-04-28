@@ -1,0 +1,199 @@
+<?php
+/**
+ * @file
+ * Apigee API Product list filter
+ * 
+ * Filters the API Product list based on the hostname of the Drupal server.
+ *
+ * With these filters, 'Dev' sites in pantheon will not display API
+ * products that are available in environment 'prod'.  'Live' sites will
+ * display only API Products that are available on environment
+ * 'prod'. It's a hack that the environment name is hardcoded.
+ */
+
+module_load_include('inc', 'apigee_filter_apiproducts', 'functions');
+
+function apigee_filter_apiproducts_init() {
+  if (arg(0) == 'admin') {
+    $path = drupal_get_path('module', 'apigee_filter_apiproducts');
+    // we want special formatting of the settings table
+    drupal_add_css($path . '/apigee_filter_apiproducts.css');
+  }
+}
+
+
+/**
+* Implements hook_apiproduct_list_alter() to modify the list of apiproducts
+* presented to the user. 
+* 
+* The corresponding drupal_alter() is called within
+* the devconnect module, within devconnect_developer_apps/devconnect_developer_apps.module. 
+* Specifically, function devconnect_developer_apps_edit_form() .
+* 
+*/
+function apigee_filter_apiproducts_apiproduct_list_alter(&$apiproducts, &$account) {
+  // check master ON/OFF switch
+  $enabled = variable_get('apigee_filter_apiproducts_enabled', 0);
+  if ($enabled > 0) {
+    // if enabled, filter the array
+    $apiproducts = array_filter($apiproducts, apigee_filter_apiproducts_include_filter());
+  }
+}
+
+
+function apigee_filter_apiproducts_normalize_hostpattern($env) {
+  $hostpattern = variable_get('apigee_filter_apiproducts_hostpattern_' . $env,
+                              apigee_filter_apiproducts_regexize_host());
+  if(strpos($hostpattern,'@') == false) {
+    $hostpattern = '@' . $hostpattern . '@i';
+  }
+  else if(strpos($hostpattern,'/') == false) {
+    $hostpattern = '/' . $hostpattern . '/i';
+  }
+  return $hostpattern;
+}
+
+
+
+function apigee_filter_apiproducts_include_filter() {
+  $drupal_hostname = apigee_filter_apiproducts_drupal_hostname();
+  $available_environments = apigee_filter_apiproducts_all_environments();
+                                                       
+  return function($apiProductEntity) use($drupal_hostname, $available_environments) {
+    $result = FALSE;
+    foreach ($apiProductEntity->environments as $env_for_product) {
+      // sanity check here
+      if (!$result) {
+        if (in_array ($env_for_product, $available_environments)) {
+          // check ON/OFF switch for THIS particular environment
+          $varname = 'apigee_filter_apiproducts_enabled_' . $env_for_product;
+          $filtering_enabled_for_env = variable_get($varname, 0);
+          if ($filtering_enabled_for_env) {
+            $hostpattern = apigee_filter_apiproducts_normalize_hostpattern($env_for_product);
+            $result = $result || preg_match($hostpattern, $drupal_hostname);
+          }
+          else {
+            // filtering is disabled, therefore always show this apiproduct 
+            $result = TRUE;
+          }
+        }
+        else {
+          // filtering not configured for this env, therefore always show this apiproduct 
+          $result = TRUE;
+        }
+      }
+    }
+    // watchdog('apiprods_filter',
+    //          "prod !prod, include?: !result",
+    //          array('!prod' => $apiProductEntity->name, '!result' => var_export($result,true)),
+    //          WATCHDOG_WARNING);
+    return $result;
+  };
+}
+
+
+
+/**
+ * Implements hook_menu().
+ */
+function apigee_filter_apiproducts_menu() {
+  $items = array();
+  $items['admin/config/devconnect/apiproducts'] = array(
+    'title' => 'API Product Filtering',
+    'description' => 'Configuration for filtering of API Products in "add new app"',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('apigee_filter_apiproducts_admin_form'),
+    'access arguments' => array('access administration pages'),
+    'type' => MENU_NORMAL_ITEM
+  );
+
+  return $items;
+}
+
+
+/**
+ * Page callback: Current posts settings
+ *
+ * @see apigee_filter_apiproducts_menu()
+ */
+function apigee_filter_apiproducts_admin_form($form, &$form_state) {
+    if (!class_exists('Apigee\ManagementAPI\Organization')) {
+      module_load_include('module', 'libraries');
+      module_load_include('module', 'devconnect');
+      devconnect_init();
+    }
+  
+  $prefix = 'apigee_filter_apiproducts';
+  $form[$prefix] =
+    array('#type'=>'fieldset',
+          '#title'=>t('API Product filtering'),
+          '#description'=>t('Use these settings to filter the set of API Products shown in the "add an app" form. With this, you can insure that only API products deployed to a particular environment are presented to the developers. The environments can vary depending on the Drupal site hostname.')
+          );
+
+  // this is the "master switch" for filtering
+  $form[$prefix][$prefix . '_enabled'] =
+    array('#type'=>'radios',
+          '#title'=>t('Filtering enabled'),
+          '#options'=>array(0=>t('Off'),1=>t('On')),
+          '#required' => TRUE,
+          '#default_value' => variable_get($prefix . '_enabled', 0)
+          );
+
+  $available_environments = apigee_filter_apiproducts_all_environments();
+  $tprefix = '<div class=\'apiproducts_filtering\'><table><thead>' .
+    '<tr><th>Environment</th><th>Filtering Enabled</th><th>Hostname Pattern</th></tr>' .
+    '</thead><tbody>' .
+    '<tr><td>';
+  $tsuffix = '</td></tr>';
+  $num_environments = count($available_environments);
+  $ix = 0;
+  foreach ($available_environments as $env) {
+    $ix++;
+    $tprefix = $tprefix . $env . '</td><td style="text-align:center;">';
+
+    // var is like:
+    //  apigee_filter_apiproducts_enabled_{prod,test,load,stage,etc}
+    $var = $prefix . '_enabled_' . $env;
+    $fld_attributes = array('title' => t("Whether filtering is turned on for this environment. If it is not, then API Products available this environment will be shown for all sites."));
+    $is_checked = variable_get($var, 0);
+    if ($is_checked) {
+      $fld_attributes['checked'] = 'checked';
+    }
+
+    $form[$prefix][$var] =
+      array(
+            '#type' => 'checkbox',
+            '#prefix' => $tprefix,
+            '#suffix' => '</td>',
+            '#attributes' => $fld_attributes
+            );
+
+    if ($ix == $num_environments) {
+      $tsuffix = '</td></tr></tbody></table></div>';
+    }
+
+    // var is like:
+    //  apigee_filter_apiproducts_hostpattern_{prod,test,load,stage,etc}
+    $var = $prefix . '_hostpattern_' . $env;
+    $value = variable_get($var, apigee_filter_apiproducts_regexize_host());
+    $fld_attributes = array('title' =>
+                            t('If filtering is enabled for this environment, the hostname for the Drupal site is compared against this pattern, and only if the pattern matches, API Products available in the environment will be shown to the developer. If filtering is not enabled for the environment, then API Products available in the environment will always be shown to the developer. This is a regular expression. Remember to escape dots with backslash, etc.'));
+    
+    $form[$prefix][$var] =
+      array('#type' => 'textfield',
+            '#default_value' => $value,
+            '#size' => 44,
+            '#prefix' => '<td>',
+            '#suffix' => $tsuffix,
+            '#maxlength' => 82,
+            '#attributes' => $fld_attributes,
+            '#required' => TRUE
+            );
+
+    $tprefix = '<tr><td>';
+  }
+  
+  return system_settings_form($form);
+}
+
+

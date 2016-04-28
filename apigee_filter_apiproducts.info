@@ -1,0 +1,8 @@
+name = Apigee APIProduct List filter
+description = Adds an API Product list filter
+package = DevConnectCustom
+version = "7.x-1.5"
+core = 7.x
+
+configure = admin/config/devconnect/apiproducts
+
