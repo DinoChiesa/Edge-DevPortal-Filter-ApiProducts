@@ -43,4 +43,4 @@ A developer or user visiting the devportal site will see nothing different, noth
 
 ## Bugs
 
-1. This module has not been tested with the multi-org module in the Apigee Edge Developer Portal. 
+none yet? 
