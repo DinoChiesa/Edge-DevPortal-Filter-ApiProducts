@@ -41,6 +41,11 @@ Obviously, the settings apply only to the site you are currently administering. 
 
 A developer or user visiting the devportal site will see nothing different, nothing different in their experience, except that the list of API products in the dropdown box will be filtered.
 
+## Availability
+
+This module relies on enhancement DEVSOL-2137 in the Apigee Edge developer portal. This was first implemented in April 2016. Make sure your developer portal has this enhancement before trying to use this module. 
+
+
 ## Bugs
 
 none yet? 
