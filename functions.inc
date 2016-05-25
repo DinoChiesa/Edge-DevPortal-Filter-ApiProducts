@@ -2,7 +2,7 @@
 /**
  * @file
  * Apigee API Product list filter - included functions
- * 
+ *
  * Supporting functions used in the module and the .install
  *
  */
@@ -45,10 +45,5 @@ function apigee_filter_apiproducts_drupal_hostname() {
 
 
 function apigee_filter_apiproducts_regexize_host() {
-  $drupal_hostname = str_replace(".", "\\.",
-                                 apigee_filter_apiproducts_drupal_hostname());
-  return "^" . $drupal_hostname;
+  return "^" . preg_quote(trim(apigee_filter_apiproducts_drupal_hostname()));
 }
-
-
-?>

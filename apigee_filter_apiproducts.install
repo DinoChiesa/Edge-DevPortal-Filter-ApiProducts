@@ -59,4 +59,3 @@ function apigee_filter_apiproducts_install() {
   // variable_set('apigee_filter_apiproducts_envname', 'prod');
 }
 
-?>
