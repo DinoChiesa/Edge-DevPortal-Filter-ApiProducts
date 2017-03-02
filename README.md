@@ -45,6 +45,11 @@ A developer or user visiting the devportal site will see nothing different, noth
 
 This module relies on enhancement DEVSOL-2137 in the Apigee Edge developer portal. This was first implemented in April 2016. Make sure your developer portal has this enhancement before trying to use this module. 
 
+## License
+
+This material is copyright 2016 Apigee Corporation, 2017 Google, Inc.
+and is licensed under the [Apache 2.0 License](LICENSE). 
+
 
 ## Bugs
 
