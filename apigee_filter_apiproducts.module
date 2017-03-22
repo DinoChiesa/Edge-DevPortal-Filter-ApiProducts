@@ -44,10 +44,10 @@ function apigee_filter_apiproducts_apiproduct_list_alter(&$apiproducts, &$accoun
 function apigee_filter_apiproducts_normalize_hostpattern($env) {
   $hostpattern = variable_get('apigee_filter_apiproducts_hostpattern_' . $env,
                               apigee_filter_apiproducts_regexize_host());
-  if(strpos($hostpattern,'@') == false) {
+  if(strpos($hostpattern,'@') === false) {
     $hostpattern = '@' . $hostpattern . '@i';
   }
-  else if(strpos($hostpattern,'/') == false) {
+  else if(strpos($hostpattern,'/') === false) {
     $hostpattern = '/' . $hostpattern . '/i';
   }
   return $hostpattern;
@@ -58,8 +58,19 @@ function apigee_filter_apiproducts_normalize_hostpattern($env) {
 function apigee_filter_apiproducts_include_filter() {
   $drupal_hostname = apigee_filter_apiproducts_drupal_hostname();
   $available_environments = apigee_filter_apiproducts_all_environments();
-                                                       
-  return function($apiProductEntity) use($drupal_hostname, $available_environments) {
+  $want_logging = variable_get('apigee_filter_apiproducts_logging', 0);
+
+  // optionally log the hostname
+  if (variable_get('apigee_filter_apiproducts_logging', 0)) {
+    watchdog('apigee_filter_apiproducts',
+             "hostname !hostname", array('!hostname' => $drupal_hostname),
+             WATCHDOG_NOTICE);
+  }
+  
+  // return a function that will be invoked later, with closures on variables.
+  // We don't want to retrieve the environment for each product entity to be
+  // checked. Likewise the hostname. Likewise whether to log.
+  return function($apiProductEntity) use($drupal_hostname, $available_environments, $want_logging) {
     $result = FALSE;
     foreach ($apiProductEntity->environments as $env_for_product) {
       // sanity check here
@@ -83,10 +94,14 @@ function apigee_filter_apiproducts_include_filter() {
         }
       }
     }
-    // watchdog('apiprods_filter',
-    //          "prod !prod, include?: !result",
-    //          array('!prod' => $apiProductEntity->name, '!result' => var_export($result,true)),
-    //          WATCHDOG_WARNING);
+
+    // optionally log this decision
+    if ($want_logging) {
+      watchdog('apigee_filter_apiproducts',
+               "!result !prod",
+               array('!prod' => $apiProductEntity->name, '!result' => ($result)?'include':'exclude'),
+               WATCHDOG_NOTICE);
+    }
     return $result;
   };
 }
@@ -117,11 +132,11 @@ function apigee_filter_apiproducts_menu() {
  * @see apigee_filter_apiproducts_menu()
  */
 function apigee_filter_apiproducts_admin_form($form, &$form_state) {
-    if (!class_exists('Apigee\ManagementAPI\Organization')) {
-      module_load_include('module', 'libraries');
-      module_load_include('module', 'devconnect');
-      devconnect_init();
-    }
+  if (!class_exists('Apigee\ManagementAPI\Organization')) {
+    module_load_include('module', 'libraries');
+    module_load_include('module', 'devconnect');
+    devconnect_init();
+  }
   
   $prefix = 'apigee_filter_apiproducts';
   $form[$prefix] =
@@ -146,6 +161,7 @@ function apigee_filter_apiproducts_admin_form($form, &$form_state) {
     '<tr><td>';
   $tsuffix = '</td></tr>';
   $num_environments = count($available_environments);
+
   $ix = 0;
   foreach ($available_environments as $env) {
     $ix++;
@@ -177,7 +193,7 @@ function apigee_filter_apiproducts_admin_form($form, &$form_state) {
     $var = $prefix . '_hostpattern_' . $env;
     $value = variable_get($var, apigee_filter_apiproducts_regexize_host());
     $fld_attributes = array('title' =>
-                            t('If filtering is enabled for this environment, the hostname for the Drupal site is compared against this pattern, and only if the pattern matches, API Products available in the environment will be shown to the developer. If filtering is not enabled for the environment, then API Products available in the environment will always be shown to the developer. This is a regular expression. Remember to escape dots with backslash, etc.'));
+                            t('This is a regular expression. You can use groups and options. Escape dots with backslash. If filtering is enabled for this environment, the hostname for the Drupal site is compared against this pattern, and only if the pattern matches, API Products available in the environment will be shown to the developer. If filtering is not enabled for the environment, then API Products available in the environment will always be shown to the developer regardless of the hostname.'));
     
     $form[$prefix][$var] =
       array('#type' => 'textfield',
@@ -192,7 +208,18 @@ function apigee_filter_apiproducts_admin_form($form, &$form_state) {
 
     $tprefix = '<tr><td>';
   }
-  
+
+  // want logging of module activities?
+  $form[$prefix][$prefix . '_logging'] =
+    array('#type'=>'radios',
+          '#title'=> t('Logging of apiproduct filter activities? Not recommended for continuous use in production.'),
+          '#options'=>array(0=>t('Off'),1=>t('On')),
+          '#prefix' => '',
+          '#suffix' => '',
+          '#required' => TRUE,
+          '#default_value' => variable_get($prefix . '_logging', 0)
+          );
+
   return system_settings_form($form);
 }
 

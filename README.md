@@ -2,7 +2,7 @@
 
 This custom module for Drupal adds a capability to the Apigee Edge developer portal that allows portal administrators to filter the list of API Products presented to developers in the "add an app" page.
 
-It is built and tested on Druapl 7. 
+It is built and tested on Drupal 7. 
 
 ## Details
 

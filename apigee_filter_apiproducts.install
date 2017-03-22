@@ -11,8 +11,9 @@ module_load_include('inc', 'apigee_filter_apiproducts', 'functions');
 
 function apigee_filter_apiproducts_uninstall() {
   $varprefix = 'apigee_filter_apiproducts_';
-  /* legacy */
   variable_del($varprefix . 'enabled');
+  variable_del($varprefix . 'logging');
+  /* legacy */
   variable_del($varprefix . 'envname');
   variable_del($varprefix . 'envnames');
   variable_del($varprefix . 'environments');
@@ -33,6 +34,7 @@ function apigee_filter_apiproducts_install() {
   $available_environments = apigee_filter_apiproducts_all_environments();
 
   variable_set($varprefix . 'enabled', variable_get($varprefix . 'enabled', 0));
+  variable_set($varprefix . 'logging', variable_get($varprefix . 'logging', 0));
   
   foreach($available_environments as $env) {
     $var = $varprefix . 'enabled_' . $env;
@@ -48,14 +50,5 @@ function apigee_filter_apiproducts_install() {
     variable_del($varprefix . $var);
   }
 
-  // variable_set('apigee_filter_apiproducts_envnames',
-  //              variable_get('apigee_filter_apiproducts_envnames', 'prod'));
-  // variable_set('apigee_filter_apiproducts_environments',
-  //              variable_get('apigee_filter_apiproducts_environments', array('prod')));
-  // variable_set('apigee_filter_apiproducts_conditional', 
-  //              variable_get('apigee_filter_apiproducts_conditional', 0));
-  // variable_set('apigee_filter_apiproducts_hostpattern', 
-  //              variable_get('apigee_filter_apiproducts_hostpattern', '^dev'));
-  // variable_set('apigee_filter_apiproducts_envname', 'prod');
 }
 

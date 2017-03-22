@@ -8,7 +8,7 @@
  */
 
 function apigee_filter_apiproducts_all_environments() {
-  $available_environments = array("prod, test");
+  $available_environments = array("prod", "test"); /* default */
   try {
     $dca = new Apigee\ManagementAPI\DeveloperAppAnalytics(devconnect_default_org_config());
     $available_environments = $dca->getAllEnvironments();
@@ -45,5 +45,11 @@ function apigee_filter_apiproducts_drupal_hostname() {
 
 
 function apigee_filter_apiproducts_regexize_host() {
-  return "^" . preg_quote(trim(apigee_filter_apiproducts_drupal_hostname()));
+  $host_pattern = trim(apigee_filter_apiproducts_drupal_hostname());
+  $prefix_needed = (substr( $host_pattern, 0, 4 ) !== "^"); 
+  //$host_pattern = preg_quote($host_pattern);
+  if ($prefix_needed) {
+    $host_pattern = "^" . $host_pattern;
+  }
+  return $host_pattern ;
 }
