@@ -14,11 +14,11 @@ This is such a module.  It allows portal administrators to map API products base
 
 ## Installation and Enabling the Module
 
-You should copy the module source code to your druapl git directory, place it in sites/all/modules/custom.
+You should copy the module source code to your drupal git directory, place it in sites/all/modules/custom. The final directory should be  sites/all/modules/custom/apigee_filter_apiproducts .
 
 Then, perform the requisite `git push` to get the source code into the dev site.
 
-Login to the dev site as an admin, and click to Admin / Modules  and then search for, find, and enable the API Product Filtering module.
+Login to the dev site as an admin, and click to Admin / Modules  and then search for, find, and enable the API Product Filtering module.  When everything looks right, propagate the code to stage and live. 
 
 ## Let me show you
 
@@ -34,7 +34,7 @@ There you will see a panel that presents the list of environments for your organ
 
 For example, you can set it so that the API Product filtering for the dev site will be different than the filter for the live site. This means a developer logging into the dev site would see a different set of API products than a developer logigng into the live site.
 
-Obviously, the settings apply only to the site you are currently administering. If you want the settings administratively specified in the dev site to also apply to the test and live sites, you will need to either repeat those settings, or copy the database from dev to test and from dev to live. Be careful if you element to use this option!
+Obviously, the settings apply only to the site you are currently administering. If you want the settings administratively specified in the dev site to also apply to the test and live sites, you will need to either repeat those settings, or copy the database from dev to test and from dev to live. Be careful if you elect to use this option!  You may not wish to copy the database. It's pretty easy to just repeat the appropriate configuration steps. 
 
 
 ## The Experience of the Developer or User
